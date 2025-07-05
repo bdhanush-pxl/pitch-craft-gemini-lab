@@ -31,7 +31,7 @@ const Features = () => {
     <section className="py-32 px-6 sm:px-8 lg:px-12">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-20">
-          <h2 className="text-5xl sm:text-6xl font-bold mb-8 font-playfair">
+          <h2 className="text-5xl sm:text-6xl font-bold mb-8 font-poppins">
             Everything You Need to
             <span className="block text-transparent bg-gradient-to-r from-primary to-green-400 bg-clip-text">
               Nail Your Pitch
@@ -44,14 +44,14 @@ const Features = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {features.map((feature, index) => (
-            <Card key={index} className="bg-card/50 backdrop-blur-sm border-border hover:bg-card/80 transition-all duration-300 shadow-lg">
+            <Card key={index} className="bg-card/50 backdrop-blur-sm border-border hover:bg-card/80 transition-all duration-300 shadow-lg rounded-3xl">
               <CardContent className="p-10">
                 <div className="flex items-start gap-6">
-                  <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-md">
+                  <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center flex-shrink-0 shadow-md border border-primary/20">
                     {feature.icon}
                   </div>
                   <div>
-                    <h3 className="text-2xl font-semibold mb-4 font-playfair">{feature.title}</h3>
+                    <h3 className="text-2xl font-semibold mb-4 font-poppins">{feature.title}</h3>
                     <p className="text-muted-foreground leading-relaxed text-lg">
                       {feature.description}
                     </p>

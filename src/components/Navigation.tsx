@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles } from 'lucide-react';
+import { Mic } from 'lucide-react';
 
 const Navigation = () => {
   return (
@@ -11,12 +11,12 @@ const Navigation = () => {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-green-400 rounded-xl flex items-center justify-center shadow-lg">
-                <Sparkles className="w-5 h-5 text-primary-foreground" />
+              <div className="w-12 h-12 bg-gradient-to-br from-primary to-green-400 rounded-2xl flex items-center justify-center shadow-lg border border-primary/20">
+                <Mic className="w-6 h-6 text-primary-foreground" />
               </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-md"></div>
             </div>
-            <span className="text-2xl font-bold font-playfair">PitchCraft</span>
+            <span className="text-2xl font-bold font-poppins">PitchCraft</span>
           </div>
 
           {/* Navigation links */}
@@ -33,7 +33,7 @@ const Navigation = () => {
           </div>
 
           {/* CTA Button */}
-          <Button className="h-12 px-6 font-semibold">Get Started</Button>
+          <Button className="h-12 px-6 font-semibold rounded-full">Get Started</Button>
         </div>
       </div>
     </nav>
