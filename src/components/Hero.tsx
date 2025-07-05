@@ -1,11 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Mic, Zap, FileText } from 'lucide-react';
-
 const Hero = () => {
-  return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background gradient effects */}
       <div className="absolute inset-0 gradient-mesh"></div>
       <div className="absolute top-1/4 left-1/4 w-96 h-96 gradient-radial"></div>
@@ -30,7 +27,7 @@ const Hero = () => {
         </h1>
 
         {/* Subtitle */}
-        <p className="text-xl sm:text-2xl text-muted-foreground max-w-4xl mx-auto mb-16 leading-relaxed font-inter">
+        <p className="text-xl max-w-4xl mx-auto mb-16 leading-relaxed font-inter sm:text-xl text-gray-50">
           Record your ideas, get AI-optimized one-liners and structured pitch decks. 
           Stop rambling, start converting.
         </p>
@@ -79,8 +76,6 @@ const Hero = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default Hero;
