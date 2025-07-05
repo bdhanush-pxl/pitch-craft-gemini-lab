@@ -1,10 +1,7 @@
-
 import React from 'react';
 import { Sparkles } from 'lucide-react';
-
 const Footer = () => {
-  return (
-    <footer className="bg-secondary/30 border-t border-border">
+  return <footer className="bg-secondary/30 border-t border-border">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
@@ -48,11 +45,9 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-border pt-12 mt-12 text-center text-muted-foreground">
-          <p className="text-base">&copy; 2024 PitchCraft. All rights reserved.</p>
+          <p className="text-base">© 2025 PitchCraft. All rights reserved.</p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>;
 };
-
 export default Footer;

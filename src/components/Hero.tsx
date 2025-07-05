@@ -10,7 +10,7 @@ const Hero = () => {
       
       <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
         {/* Badge */}
-        <div className="inline-flex items-center gap-3 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-6 py-3 mb-12">
+        <div className="inline-flex items-center gap-3 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-6 py-3 mb-12 mx-0 my-[35px]">
           <Zap className="w-5 h-5 text-primary" />
           <span className="text-sm font-medium text-muted-foreground">
             Powered by AI & Guy Kawasaki's Methodology
