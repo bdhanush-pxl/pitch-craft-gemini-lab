@@ -1,0 +1,27 @@
+
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
+import { SidebarInset } from '@/components/ui/sidebar';
+import CreatePage from '@/components/dashboard/CreatePage';
+import LibraryPage from '@/components/dashboard/LibraryPage';
+
+const Dashboard = () => {
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <div className="min-h-screen flex w-full bg-background">
+        <DashboardSidebar />
+        <SidebarInset>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard/create" replace />} />
+            <Route path="/create" element={<CreatePage />} />
+            <Route path="/library" element={<LibraryPage />} />
+          </Routes>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
+};
+
+export default Dashboard;

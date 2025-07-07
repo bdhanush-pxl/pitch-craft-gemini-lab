@@ -33,8 +33,11 @@ const Navigation = () => {
           </div>
 
           {/* CTA Button */}
-          <Button className="h-9 px-5 text-sm font-semibold rounded-full hover:scale-105 transition-transform duration-200">
-            Get Started
+          <Button 
+            asChild
+            className="h-9 px-5 text-sm font-semibold rounded-full hover:scale-105 transition-transform duration-200"
+          >
+            <a href="/dashboard">Get Started</a>
           </Button>
         </div>
       </div>
