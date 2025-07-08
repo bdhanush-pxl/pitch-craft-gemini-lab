@@ -34,56 +34,45 @@ const CreatePage = () => {
   const [generatedPitch, setGeneratedPitch] = useState<GeneratedPitch | null>(null);
   const [error, setError] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recognitionRef = useRef<any>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const startRecording = async () => {
     try {
       setError('');
-
-      // Check if browser supports speech recognition
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        throw new Error('Speech recognition not supported in this browser');
-      }
-
+      
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true
+        }
       });
 
-      // Set up speech recognition
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-      let finalTranscript = '';
-      recognitionRef.current.onresult = (event: any) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        setTranscript(finalTranscript + interimTranscript);
-      };
-      recognitionRef.current.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setError('Speech recognition error: ' + event.error);
-        setIsRecording(false);
-      };
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
-        setIsTranscribing(false);
-        if (finalTranscript.trim()) {
-          setTranscript(finalTranscript.trim());
+      // Set up MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
         }
       };
 
-      // Start recording
-      recognitionRef.current.start();
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        
+        // Stop all tracks to free up the microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start(1000); // Collect data every second
       setIsRecording(true);
       console.log('Recording started...');
     } catch (error) {
@@ -93,11 +82,34 @@ const CreatePage = () => {
   };
 
   const stopRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsTranscribing(true);
     }
-    setIsRecording(false);
-    setIsTranscribing(false);
+  };
+
+  const transcribeAudio = async (audioBlob: Blob) => {
+    try {
+      // Convert blob to base64
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+      const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+        body: { audio: base64Audio }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setTranscript(data.text);
+      setIsTranscribing(false);
+    } catch (error) {
+      console.error('Transcription error:', error);
+      setError('Failed to transcribe audio. Please try again.');
+      setIsTranscribing(false);
+    }
   };
 
   const handleRecordClick = () => {
@@ -119,29 +131,20 @@ const CreatePage = () => {
       setError('No transcript available to generate pitch');
       return;
     }
+    
     setIsGenerating(true);
     setError('');
+    
     try {
-      // For now, we'll simulate the Gemini AI call with a mock response
-      // In a real implementation, you would call the Gemini API here
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      const { data, error } = await supabase.functions.invoke('generate-pitch', {
+        body: { transcript }
+      });
 
-      const mockPitch: GeneratedPitch = {
-        oneLiner: "We're revolutionizing how startups create compelling pitch decks through AI-powered voice transcription and Guy Kawasaki's proven methodology.",
-        structure: {
-          problem: "Entrepreneurs struggle to create compelling, structured pitch decks that effectively communicate their vision to investors.",
-          solution: "An AI-powered platform that transforms founder stories into professional pitch decks using proven frameworks.",
-          market: "The global presentation software market is valued at $6.2B and growing at 8.5% annually, with startups raising $500B+ yearly.",
-          competition: "Traditional tools like PowerPoint lack AI assistance, while pitch consultants are expensive and time-consuming.",
-          businessModel: "SaaS subscription model with tiered pricing: $29/month for basic, $99/month for premium features.",
-          traction: "500+ beta users, 89% user satisfaction rate, partnerships with 3 major accelerators.",
-          team: "Experienced team with backgrounds in AI, design, and startup consulting from top tech companies.",
-          financials: "Projecting $1M ARR by end of year 2, with 40% gross margins and path to profitability.",
-          funding: "Seeking $2M seed round to accelerate product development and user acquisition.",
-          timeline: "12-month roadmap includes mobile app launch, enterprise features, and international expansion."
-        }
-      };
-      setGeneratedPitch(mockPitch);
+      if (error) {
+        throw error;
+      }
+
+      setGeneratedPitch(data);
     } catch (error) {
       console.error('Error generating pitch:', error);
       setError('Failed to generate pitch. Please try again.');
@@ -264,7 +267,7 @@ const CreatePage = () => {
   }
 
   // Show transcript review view
-  if (transcript && !isGenerating) {
+  if (transcript && !isGenerating && !isTranscribing) {
     return (
       <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
@@ -330,6 +333,14 @@ const CreatePage = () => {
               <p className="text-base font-medium mb-2">Generating your pitch...</p>
               <p className="text-sm text-muted-foreground">This may take a moment</p>
             </div>
+          ) : isTranscribing ? (
+            <div className="text-center">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+              <p className="text-base font-medium mb-2">Transcribing your recording...</p>
+              <p className="text-sm text-muted-foreground">Please wait while we process your audio</p>
+            </div>
           ) : (
             <>
               <div className="relative mb-8">
@@ -375,16 +386,8 @@ const CreatePage = () => {
                 )}
               </div>
 
-              {/* Live transcript display */}
-              {transcript && isRecording && (
-                <div className="mt-8 p-4 bg-secondary/20 rounded-lg border border-border/50 max-w-2xl">
-                  <h3 className="font-semibold mb-2 text-sm font-poppins">Live Transcript</h3>
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{transcript}</p>
-                </div>
-              )}
-
               {/* Recording Tips */}
-              {!isRecording && !transcript && (
+              {!isRecording && (
                 <div className="mt-12 p-6 bg-secondary/20 rounded-xl border border-border/50 max-w-2xl">
                   <h3 className="font-semibold mb-3 font-poppins text-base">💡 Recording Tips</h3>
                   <ul className="space-y-2 text-xs text-muted-foreground">
