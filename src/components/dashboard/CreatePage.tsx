@@ -1,9 +1,13 @@
+
 import React, { useState, useRef } from 'react';
 import { Mic, Square, Loader2, RotateCcw, Sparkles, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+
 interface GeneratedPitch {
   oneLiner: string;
   structure: {
@@ -19,15 +23,19 @@ interface GeneratedPitch {
     timeline: string;
   };
 }
+
 const CreatePage = () => {
+  const { user } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [generatedPitch, setGeneratedPitch] = useState<GeneratedPitch | null>(null);
   const [error, setError] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
+
   const startRecording = async () => {
     try {
       setError('');
@@ -83,6 +91,7 @@ const CreatePage = () => {
       setError('Failed to start recording. Please check microphone permissions.');
     }
   };
+
   const stopRecording = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -90,6 +99,7 @@ const CreatePage = () => {
     setIsRecording(false);
     setIsTranscribing(false);
   };
+
   const handleRecordClick = () => {
     if (isRecording) {
       stopRecording();
@@ -97,11 +107,13 @@ const CreatePage = () => {
       startRecording();
     }
   };
+
   const rerecord = () => {
     setTranscript('');
     setGeneratedPitch(null);
     setError('');
   };
+
   const generatePitch = async () => {
     if (!transcript.trim()) {
       setError('No transcript available to generate pitch');
@@ -137,31 +149,53 @@ const CreatePage = () => {
       setIsGenerating(false);
     }
   };
-  const savePitch = () => {
-    if (!generatedPitch) return;
 
-    // Save to localStorage for now (later this would go to a database)
-    const existingPitches = JSON.parse(localStorage.getItem('savedPitches') || '[]');
-    const newPitch = {
-      id: Date.now(),
-      title: generatedPitch.oneLiner.substring(0, 50) + '...',
-      oneLiner: generatedPitch.oneLiner,
-      structure: generatedPitch.structure,
-      transcript: transcript,
-      createdAt: new Date().toISOString(),
-      status: 'completed'
-    };
-    existingPitches.push(newPitch);
-    localStorage.setItem('savedPitches', JSON.stringify(existingPitches));
-    toast({
-      title: "Pitch Saved!",
-      description: "Your pitch has been saved to the library."
-    });
+  const savePitch = async () => {
+    if (!generatedPitch || !user) return;
 
-    // Reset the form
-    setTranscript('');
-    setGeneratedPitch(null);
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('pitches')
+        .insert({
+          user_id: user.id,
+          title: generatedPitch.oneLiner.substring(0, 50) + '...',
+          one_liner: generatedPitch.oneLiner,
+          structure: generatedPitch.structure,
+          transcript: transcript,
+          status: 'completed'
+        });
+
+      if (error) {
+        console.error('Error saving pitch:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save pitch. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Pitch Saved!",
+        description: "Your pitch has been saved to the library."
+      });
+
+      // Reset the form
+      setTranscript('');
+      setGeneratedPitch(null);
+    } catch (error) {
+      console.error('Error saving pitch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save pitch. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
   const deletePitch = () => {
     setGeneratedPitch(null);
     setTranscript('');
@@ -169,7 +203,8 @@ const CreatePage = () => {
 
   // Show generated pitch view
   if (generatedPitch) {
-    return <div className="flex-1 p-8">
+    return (
+      <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 text-center animate-fade-in">
             <h1 className="text-2xl font-bold font-poppins mb-2">Your Generated Pitch</h1>
@@ -193,32 +228,45 @@ const CreatePage = () => {
                 <CardTitle className="text-lg">Pitch Structure</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {Object.entries(generatedPitch.structure).map(([key, value]) => <div key={key}>
+                {Object.entries(generatedPitch.structure).map(([key, value]) => (
+                  <div key={key}>
                     <h3 className="font-semibold text-sm capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{value}</p>
-                  </div>)}
+                  </div>
+                ))}
               </CardContent>
             </Card>
 
             {/* Action buttons */}
             <div className="flex gap-3 justify-center">
-              <Button onClick={savePitch} className="h-9 px-6">
-                <Save className="w-4 h-4 mr-2" />
-                Save to Library
+              <Button onClick={savePitch} className="h-9 px-6" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save to Library
+                  </>
+                )}
               </Button>
-              <Button onClick={deletePitch} variant="outline" className="h-9 px-6">
+              <Button onClick={deletePitch} variant="outline" className="h-9 px-6" disabled={isSaving}>
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
             </div>
           </div>
         </div>
-      </div>;
+      </div>
+    );
   }
 
   // Show transcript review view
   if (transcript && !isGenerating) {
-    return <div className="flex-1 p-8">
+    return (
+      <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8 text-center animate-fade-in">
             <h1 className="text-2xl font-bold font-poppins mb-2">Review Your Recording</h1>
@@ -247,11 +295,13 @@ const CreatePage = () => {
             </div>
           </div>
         </div>
-      </div>;
+      </div>
+    );
   }
 
   // Main recording view
-  return <div className="flex-1 p-8">
+  return (
+    <div className="flex-1 p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-12 text-center animate-fade-in">
@@ -262,58 +312,80 @@ const CreatePage = () => {
         </div>
 
         {/* Error Alert */}
-        {error && <div className="mb-8 animate-fade-in">
+        {error && (
+          <div className="mb-8 animate-fade-in">
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
-          </div>}
+          </div>
+        )}
 
         {/* Main Recording Area */}
         <div className="flex flex-col items-center justify-center min-h-[400px] animate-fade-in">
-          {isGenerating ? <div className="text-center">
+          {isGenerating ? (
+            <div className="text-center">
               <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
               <p className="text-base font-medium mb-2">Generating your pitch...</p>
               <p className="text-sm text-muted-foreground">This may take a moment</p>
-            </div> : <>
+            </div>
+          ) : (
+            <>
               <div className="relative mb-8">
                 {/* Outer pulse ring */}
-                {isRecording && <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>}
+                {isRecording && (
+                  <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping"></div>
+                )}
                 
                 {/* Record Button */}
-                <Button onClick={handleRecordClick} size="lg" className={`
+                <Button
+                  onClick={handleRecordClick}
+                  size="lg"
+                  className={`
                     relative w-24 h-24 rounded-full text-base font-semibold transition-all duration-300 hover:scale-105
                     ${isRecording ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-gradient-to-br from-primary to-green-400 hover:from-primary/90 hover:to-green-400/90'}
-                  `}>
-                  {isRecording ? <div className="flex flex-col items-center gap-1">
+                  `}
+                >
+                  {isRecording ? (
+                    <div className="flex flex-col items-center gap-1">
                       <Square className="w-6 h-6" />
                       <span className="text-xs">Stop</span>
-                    </div> : <div className="flex flex-col items-center gap-1">
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1">
                       <Mic className="w-6 h-6" />
                       <span className="text-xs">Record</span>
-                    </div>}
+                    </div>
+                  )}
                 </Button>
               </div>
 
               {/* Status Text */}
               <div className="text-center">
-                {isRecording ? <div className="flex items-center gap-2 text-red-500">
+                {isRecording ? (
+                  <div className="flex items-center gap-2 text-red-500">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span className="font-medium text-sm">Recording in progress...</span>
-                  </div> : <p className="text-muted-foreground text-base">
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-base">
                     Click the record button to start sharing your founder story
-                  </p>}
+                  </p>
+                )}
               </div>
 
               {/* Live transcript display */}
-              {transcript && isRecording && <div className="mt-8 p-4 bg-secondary/20 rounded-lg border border-border/50 max-w-2xl">
+              {transcript && isRecording && (
+                <div className="mt-8 p-4 bg-secondary/20 rounded-lg border border-border/50 max-w-2xl">
                   <h3 className="font-semibold mb-2 text-sm font-poppins">Live Transcript</h3>
                   <p className="text-xs text-muted-foreground whitespace-pre-wrap">{transcript}</p>
-                </div>}
+                </div>
+              )}
 
               {/* Recording Tips */}
-              {!isRecording && !transcript && <div className="mt-12 p-6 bg-secondary/20 rounded-xl border border-border/50 max-w-2xl">
+              {!isRecording && !transcript && (
+                <div className="mt-12 p-6 bg-secondary/20 rounded-xl border border-border/50 max-w-2xl">
                   <h3 className="font-semibold mb-3 font-poppins text-base">💡 Recording Tips</h3>
                   <ul className="space-y-2 text-xs text-muted-foreground">
                     <li>• Speak clearly and at a normal pace</li>
@@ -321,10 +393,14 @@ const CreatePage = () => {
                     <li>• Mention your target market and unique value proposition</li>
                     <li>• Include key metrics and milestones if available</li>
                   </ul>
-                </div>}
-            </>}
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default CreatePage;

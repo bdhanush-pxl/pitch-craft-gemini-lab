@@ -1,15 +1,17 @@
 
 import React, { useState, useEffect } from 'react';
-import { FileText, Calendar, Download, Eye, Trash2 } from 'lucide-react';
+import { FileText, Calendar, Download, Eye, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SavedPitch {
-  id: number;
+  id: string;
   title: string;
-  oneLiner: string;
+  one_liner: string;
   structure: {
     problem: string;
     solution: string;
@@ -23,32 +25,91 @@ interface SavedPitch {
     timeline: string;
   };
   transcript: string;
-  createdAt: string;
+  created_at: string;
   status: string;
 }
 
 const LibraryPage = () => {
+  const { user } = useAuth();
   const [savedPitches, setSavedPitches] = useState<SavedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<SavedPitch | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
-    loadSavedPitches();
-  }, []);
+    if (user) {
+      loadSavedPitches();
+    }
+  }, [user]);
 
-  const loadSavedPitches = () => {
-    const pitches = JSON.parse(localStorage.getItem('savedPitches') || '[]');
-    setSavedPitches(pitches);
+  const loadSavedPitches = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('pitches')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading pitches:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your pitches. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setSavedPitches(data || []);
+    } catch (error) {
+      console.error('Error loading pitches:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your pitches. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const deletePitch = (pitchId: number) => {
-    const updatedPitches = savedPitches.filter(pitch => pitch.id !== pitchId);
-    localStorage.setItem('savedPitches', JSON.stringify(updatedPitches));
-    setSavedPitches(updatedPitches);
-    
-    toast({
-      title: "Pitch Deleted",
-      description: "The pitch has been removed from your library.",
-    });
+  const deletePitch = async (pitchId: string) => {
+    setDeleting(pitchId);
+    try {
+      const { error } = await supabase
+        .from('pitches')
+        .delete()
+        .eq('id', pitchId)
+        .eq('user_id', user?.id);
+
+      if (error) {
+        console.error('Error deleting pitch:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete pitch. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setSavedPitches(pitches => pitches.filter(pitch => pitch.id !== pitchId));
+      toast({
+        title: "Pitch Deleted",
+        description: "The pitch has been removed from your library.",
+      });
+    } catch (error) {
+      console.error('Error deleting pitch:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete pitch. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const downloadPitch = (pitch: SavedPitch) => {
@@ -56,7 +117,7 @@ const LibraryPage = () => {
 PITCH DECK - ${pitch.title}
 
 ONE-LINER:
-${pitch.oneLiner}
+${pitch.one_liner}
 
 PITCH STRUCTURE:
 ${Object.entries(pitch.structure).map(([key, value]) => `
@@ -67,7 +128,7 @@ ${value}
 ORIGINAL TRANSCRIPT:
 ${pitch.transcript}
 
-Generated on: ${new Date(pitch.createdAt).toLocaleDateString()}
+Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
     `.trim();
 
     const blob = new Blob([pitchContent], { type: 'text/plain' });
@@ -85,6 +146,27 @@ Generated on: ${new Date(pitch.createdAt).toLocaleDateString()}
       description: "Your pitch deck has been downloaded as a text file.",
     });
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="mb-8 animate-fade-in">
+            <h1 className="text-2xl font-bold font-poppins mb-2">Pitch Library</h1>
+            <p className="text-muted-foreground text-sm">
+              Access and manage all your generated pitch decks
+            </p>
+          </div>
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading your pitches...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-8">
@@ -115,7 +197,7 @@ Generated on: ${new Date(pitch.createdAt).toLocaleDateString()}
                       <h3 className="font-semibold font-poppins text-base">{pitch.title}</h3>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                         <Calendar className="w-3 h-3" />
-                        <span>Created on {new Date(pitch.createdAt).toLocaleDateString()}</span>
+                        <span>Created on {new Date(pitch.created_at).toLocaleDateString()}</span>
                         <span className="mx-2">•</span>
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           pitch.status === 'completed' 
@@ -149,7 +231,7 @@ Generated on: ${new Date(pitch.createdAt).toLocaleDateString()}
                           <div className="space-y-4">
                             <div>
                               <h3 className="font-semibold text-sm mb-2">One-Liner</h3>
-                              <p className="text-sm text-muted-foreground">{selectedPitch.oneLiner}</p>
+                              <p className="text-sm text-muted-foreground">{selectedPitch.one_liner}</p>
                             </div>
                             
                             <div>
@@ -185,8 +267,13 @@ Generated on: ${new Date(pitch.createdAt).toLocaleDateString()}
                       size="sm"
                       className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                       onClick={() => deletePitch(pitch.id)}
+                      disabled={deleting === pitch.id}
                     >
-                      <Trash2 className="w-3 h-3 mr-1" />
+                      {deleting === pitch.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3 h-3 mr-1" />
+                      )}
                       Delete
                     </Button>
                   </div>
