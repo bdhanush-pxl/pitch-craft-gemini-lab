@@ -1,34 +1,18 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Mic, Plus, Library } from 'lucide-react';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-} from '@/components/ui/sidebar';
-
-const navigationItems = [
-  {
-    title: 'Create',
-    url: '/dashboard/create',
-    icon: Plus,
-  },
-  {
-    title: 'Library',
-    url: '/dashboard/library',
-    icon: Library,
-  },
-];
-
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader } from '@/components/ui/sidebar';
+const navigationItems = [{
+  title: 'Create',
+  url: '/dashboard/create',
+  icon: Plus
+}, {
+  title: 'Library',
+  url: '/dashboard/library',
+  icon: Library
+}];
 export function DashboardSidebar() {
-  return (
-    <Sidebar className="border-r border-border/50">
+  return <Sidebar className="border-r border-border/50">
       <SidebarHeader className="border-b border-border/50 p-6">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -37,7 +21,7 @@ export function DashboardSidebar() {
             </div>
             <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-md"></div>
           </div>
-          <span className="text-lg font-bold font-poppins">PitchCraft</span>
+          <span className="font-bold font-poppins text-xl">PitchCraft</span>
         </div>
       </SidebarHeader>
 
@@ -45,29 +29,19 @@ export function DashboardSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+              {navigationItems.map(item => <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
-                          isActive
-                            ? 'bg-primary/10 text-primary border border-primary/20'
-                            : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-                        }`
-                      }
-                    >
+                    <NavLink to={item.url} className={({
+                  isActive
+                }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${isActive ? 'bg-primary/10 text-primary border border-primary/20' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+                </SidebarMenuItem>)}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-    </Sidebar>
-  );
+    </Sidebar>;
 }
