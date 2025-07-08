@@ -37,7 +37,7 @@ const Navigation = () => {
             asChild
             className="h-9 px-5 text-sm font-semibold rounded-full hover:scale-105 transition-transform duration-200"
           >
-            <a href="/dashboard">Get Started</a>
+            <a href="/auth">Get Started</a>
           </Button>
         </div>
       </div>

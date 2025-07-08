@@ -37,9 +37,11 @@ const Hero = () => {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in">
-          <Button size="lg" className="text-base px-8 py-3 h-auto font-semibold rounded-full hover:scale-105 transition-all duration-300 shadow-lg">
-            Start Recording
-            <ArrowRight className="ml-2 w-5 h-5" />
+          <Button size="lg" className="text-base px-8 py-3 h-auto font-semibold rounded-full hover:scale-105 transition-all duration-300 shadow-lg" asChild>
+            <a href="/auth">
+              Start Recording
+              <ArrowRight className="ml-2 w-5 h-5" />
+            </a>
           </Button>
           <Button variant="outline" size="lg" className="text-base px-8 py-3 h-auto font-semibold rounded-full hover:scale-105 transition-all duration-300">
             See How It Works

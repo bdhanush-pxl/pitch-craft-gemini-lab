@@ -1,7 +1,11 @@
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Mic, Plus, Library } from 'lucide-react';
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader } from '@/components/ui/sidebar';
+import { Mic, Plus, Library, LogOut } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
+import { useAuth } from '@/contexts/AuthContext';
+
 const navigationItems = [{
   title: 'Create',
   url: '/dashboard/create',
@@ -11,8 +15,16 @@ const navigationItems = [{
   url: '/dashboard/library',
   icon: Library
 }];
+
 export function DashboardSidebar() {
-  return <Sidebar className="border-r border-border/50">
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
+  return (
+    <Sidebar className="border-r border-border/50">
       <SidebarHeader className="border-b border-border/50 p-6">
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -29,19 +41,37 @@ export function DashboardSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map(item => <SidebarMenuItem key={item.title}>
+              {navigationItems.map(item => (
+                <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={({
-                  isActive
-                }) => `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${isActive ? 'bg-primary/10 text-primary border border-primary/20' : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'}`}>
+                    <NavLink to={item.url} className={({ isActive }) => 
+                      `flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 ${
+                        isActive 
+                          ? 'bg-primary/10 text-primary border border-primary/20' 
+                          : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+                      }`
+                    }>
                       <item.icon className="w-5 h-5" />
                       <span className="font-medium">{item.title}</span>
                     </NavLink>
                   </SidebarMenuButton>
-                </SidebarMenuItem>)}
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-    </Sidebar>;
+
+      <SidebarFooter className="border-t border-border/50 p-4">
+        <Button 
+          variant="outline" 
+          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+          onClick={handleSignOut}
+        >
+          <LogOut className="w-4 h-4" />
+          Sign Out
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
+  );
 }
