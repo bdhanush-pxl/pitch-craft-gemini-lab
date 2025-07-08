@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FileText, Calendar, Download, Eye, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Tables } from '@/integrations/supabase/types';
 
 interface SavedPitch {
   id: string;
@@ -29,6 +29,9 @@ interface SavedPitch {
   status: string;
 }
 
+// Type for the raw pitch data from Supabase
+type RawPitchData = Tables<'pitches'>;
+
 const LibraryPage = () => {
   const { user } = useAuth();
   const [savedPitches, setSavedPitches] = useState<SavedPitch[]>([]);
@@ -41,6 +44,40 @@ const LibraryPage = () => {
       loadSavedPitches();
     }
   }, [user]);
+
+  // Helper function to transform raw pitch data to SavedPitch
+  const transformPitchData = (rawPitch: RawPitchData): SavedPitch => {
+    // Provide default structure if structure is null or invalid
+    const defaultStructure = {
+      problem: '',
+      solution: '',
+      market: '',
+      competition: '',
+      businessModel: '',
+      traction: '',
+      team: '',
+      financials: '',
+      funding: '',
+      timeline: ''
+    };
+
+    let structure = defaultStructure;
+    
+    // Safely parse the structure if it exists and is an object
+    if (rawPitch.structure && typeof rawPitch.structure === 'object' && rawPitch.structure !== null) {
+      structure = { ...defaultStructure, ...rawPitch.structure as any };
+    }
+
+    return {
+      id: rawPitch.id,
+      title: rawPitch.title,
+      one_liner: rawPitch.one_liner || '',
+      structure,
+      transcript: rawPitch.transcript || '',
+      created_at: rawPitch.created_at || new Date().toISOString(),
+      status: rawPitch.status || 'completed'
+    };
+  };
 
   const loadSavedPitches = async () => {
     if (!user) return;
@@ -63,7 +100,9 @@ const LibraryPage = () => {
         return;
       }
 
-      setSavedPitches(data || []);
+      // Transform the raw data to match our SavedPitch interface
+      const transformedPitches = (data || []).map(transformPitchData);
+      setSavedPitches(transformedPitches);
     } catch (error) {
       console.error('Error loading pitches:', error);
       toast({
