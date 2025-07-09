@@ -1,11 +1,8 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Mic, Zap, FileText } from 'lucide-react';
-
 const Hero = () => {
-  return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       {/* Background gradient effects */}
       <div className="absolute inset-0 gradient-mesh"></div>
       <div className="absolute top-1/4 left-1/4 w-96 h-96 gradient-radial opacity-60"></div>
@@ -13,7 +10,7 @@ const Hero = () => {
       
       <div className="relative z-10 max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 text-center">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-4 py-2 mb-8 animate-fade-in">
+        <div className="inline-flex items-center gap-2 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-4 py-2 mb-8 animate-fade-in my-[35px]">
           <Zap className="w-4 h-4 text-primary" />
           <span className="text-xs font-medium text-muted-foreground">
             Powered by AI & Guy Kawasaki's Methodology
@@ -81,8 +78,6 @@ const Hero = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default Hero;
