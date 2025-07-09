@@ -45,6 +45,20 @@ const CreatePage = () => {
     }
   }, [user, navigate]);
 
+  // Helper function to convert ArrayBuffer to base64 in chunks
+  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 32768; // 32KB chunks
+    let result = '';
+    
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.slice(i, i + chunkSize);
+      result += String.fromCharCode(...chunk);
+    }
+    
+    return btoa(result);
+  };
+
   const startRecording = async () => {
     try {
       setError('');
@@ -108,9 +122,11 @@ const CreatePage = () => {
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
       console.log('Starting transcription process...');
-      // Convert blob to base64
+      // Convert blob to base64 using the chunked method
       const arrayBuffer = await audioBlob.arrayBuffer();
-      const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      console.log('ArrayBuffer size:', arrayBuffer.byteLength);
+      
+      const base64Audio = arrayBufferToBase64(arrayBuffer);
       console.log('Audio converted to base64, length:', base64Audio.length);
 
       console.log('Calling transcribe-audio function...');
