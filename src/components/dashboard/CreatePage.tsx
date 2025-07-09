@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Square, Loader2, RotateCcw, Sparkles, Save, Trash2 } from 'lucide-react';
+import { Mic, Square, Loader2, RotateCcw, Sparkles, Save, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -35,8 +35,10 @@ const CreatePage = () => {
   const [transcript, setTranscript] = useState('');
   const [generatedPitch, setGeneratedPitch] = useState<GeneratedPitch | null>(null);
   const [error, setError] = useState('');
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
 
   // Redirect to auth if not authenticated
   useEffect(() => {
@@ -48,6 +50,7 @@ const CreatePage = () => {
   const startRecording = async () => {
     try {
       setError('');
+      setQuotaExceeded(false);
       console.log('Starting recording...');
       
       // Request microphone permission with better audio settings
@@ -137,6 +140,34 @@ const CreatePage = () => {
     }
   };
 
+  const transcribeWithWebSpeech = () => {
+    return new Promise<string>((resolve, reject) => {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        reject(new Error('Speech recognition not supported in this browser'));
+        return;
+      }
+
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        resolve(transcript);
+      };
+
+      recognition.onerror = (event: any) => {
+        reject(new Error('Speech recognition error: ' + event.error));
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    });
+  };
+
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
       console.log('Starting transcription process...');
@@ -153,17 +184,17 @@ const CreatePage = () => {
         throw new Error('Audio data is empty');
       }
 
-      // Convert to base64 in a more reliable way
+      // Convert to base64 with chunked processing to prevent memory issues
       const bytes = new Uint8Array(arrayBuffer);
-      let binaryString = '';
+      let base64Audio = '';
       const chunkSize = 8192;
       
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.slice(i, i + chunkSize);
-        binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+        const binaryString = Array.from(chunk).map(byte => String.fromCharCode(byte)).join('');
+        base64Audio += btoa(binaryString);
       }
       
-      const base64Audio = btoa(binaryString);
       console.log('Audio converted to base64, length:', base64Audio.length);
 
       if (base64Audio.length === 0) {
@@ -179,12 +210,35 @@ const CreatePage = () => {
 
       if (error) {
         console.error('Transcription error from function:', error);
+        
+        // Check if it's a quota exceeded error
+        if (error.message && error.message.toLowerCase().includes('quota')) {
+          setQuotaExceeded(true);
+          throw new Error('OpenAI quota exceeded. Please add credits to your account or try the browser transcription option.');
+        }
+        
         throw new Error(error.message || 'Transcription failed');
       }
 
       if (!data || !data.text) {
         console.error('No transcription text received:', data);
-        throw new Error('No transcription text received from service');
+        
+        // Try fallback transcription if main service fails
+        console.log('Attempting fallback transcription...');
+        try {
+          const fallbackText = await transcribeWithWebSpeech();
+          setTranscript(fallbackText);
+          setIsTranscribing(false);
+          
+          toast({
+            title: "Recording Transcribed (Fallback)!",
+            description: "Your audio has been transcribed using browser speech recognition."
+          });
+          return;
+        } catch (fallbackError) {
+          console.error('Fallback transcription failed:', fallbackError);
+          throw new Error('Both primary and fallback transcription failed');
+        }
       }
 
       console.log('Transcription successful:', data.text);
@@ -222,6 +276,7 @@ const CreatePage = () => {
     setTranscript('');
     setGeneratedPitch(null);
     setError('');
+    setQuotaExceeded(false);
   };
 
   const generatePitch = async () => {
@@ -446,7 +501,28 @@ const CreatePage = () => {
         {error && (
           <div className="mb-8 animate-fade-in">
             <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {/* Quota Exceeded Alert */}
+        {quotaExceeded && (
+          <div className="mb-8 animate-fade-in">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-semibold">OpenAI Quota Exceeded</p>
+                  <p className="text-sm">Your OpenAI account has reached its usage limit. You can:</p>
+                  <ul className="text-sm list-disc list-inside ml-4 space-y-1">
+                    <li>Add credits to your OpenAI account</li>
+                    <li>Upgrade your OpenAI plan</li>
+                    <li>Try the browser-based transcription (less accurate but free)</li>
+                  </ul>
+                </div>
+              </AlertDescription>
             </Alert>
           </div>
         )}
@@ -523,6 +599,9 @@ const CreatePage = () => {
                     <li>• Share your company's origin story and vision</li>
                     <li>• Mention your target market and unique value proposition</li>
                     <li>• Include key metrics and milestones if available</li>
+                    {quotaExceeded && (
+                      <li className="text-orange-600">• If transcription fails, browser fallback will be used</li>
+                    )}
                   </ul>
                 </div>
               )}
