@@ -2,8 +2,21 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Mic } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Navigation = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate('/dashboard/create');
+    } else {
+      navigate('/auth');
+    }
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg border-b border-border/50">
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12">
@@ -34,10 +47,10 @@ const Navigation = () => {
 
           {/* CTA Button */}
           <Button 
-            asChild
+            onClick={handleGetStarted}
             className="h-9 px-5 text-sm font-semibold rounded-full hover:scale-105 transition-transform duration-200"
           >
-            <a href="/auth">Get Started</a>
+            Get Started
           </Button>
         </div>
       </div>

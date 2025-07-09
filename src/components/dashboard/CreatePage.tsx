@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Loader2, RotateCcw, Sparkles, Save, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface GeneratedPitch {
   oneLiner: string;
@@ -26,6 +27,7 @@ interface GeneratedPitch {
 
 const CreatePage = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -36,9 +38,17 @@ const CreatePage = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
+
   const startRecording = async () => {
     try {
       setError('');
+      console.log('Starting recording...');
       
       // Request microphone permission
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -50,6 +60,8 @@ const CreatePage = () => {
         }
       });
 
+      console.log('Microphone access granted');
+
       // Set up MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus'
@@ -59,13 +71,16 @@ const CreatePage = () => {
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
+        console.log('Audio data available:', event.data.size);
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = async () => {
+        console.log('Recording stopped, processing audio...');
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log('Audio blob size:', audioBlob.size);
         await transcribeAudio(audioBlob);
         
         // Stop all tracks to free up the microphone
@@ -74,7 +89,7 @@ const CreatePage = () => {
 
       mediaRecorder.start(1000); // Collect data every second
       setIsRecording(true);
-      console.log('Recording started...');
+      console.log('Recording started successfully');
     } catch (error) {
       console.error('Error starting recording:', error);
       setError('Failed to start recording. Please check microphone permissions.');
@@ -82,6 +97,7 @@ const CreatePage = () => {
   };
 
   const stopRecording = () => {
+    console.log('Stopping recording...');
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -91,18 +107,23 @@ const CreatePage = () => {
 
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
+      console.log('Starting transcription process...');
       // Convert blob to base64
       const arrayBuffer = await audioBlob.arrayBuffer();
       const base64Audio = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      console.log('Audio converted to base64, length:', base64Audio.length);
 
+      console.log('Calling transcribe-audio function...');
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: { audio: base64Audio }
       });
 
       if (error) {
+        console.error('Transcription error:', error);
         throw error;
       }
 
+      console.log('Transcription successful:', data);
       setTranscript(data.text);
       setIsTranscribing(false);
     } catch (error) {
@@ -121,6 +142,7 @@ const CreatePage = () => {
   };
 
   const rerecord = () => {
+    console.log('Re-recording requested');
     setTranscript('');
     setGeneratedPitch(null);
     setError('');
@@ -132,18 +154,22 @@ const CreatePage = () => {
       return;
     }
     
+    console.log('Generating pitch from transcript:', transcript.substring(0, 100) + '...');
     setIsGenerating(true);
     setError('');
     
     try {
+      console.log('Calling generate-pitch function...');
       const { data, error } = await supabase.functions.invoke('generate-pitch', {
         body: { transcript }
       });
 
       if (error) {
+        console.error('Pitch generation error:', error);
         throw error;
       }
 
+      console.log('Pitch generated successfully:', data);
       setGeneratedPitch(data);
     } catch (error) {
       console.error('Error generating pitch:', error);
@@ -158,6 +184,7 @@ const CreatePage = () => {
 
     setIsSaving(true);
     try {
+      console.log('Saving pitch to database...');
       const { error } = await supabase
         .from('pitches')
         .insert({
@@ -179,6 +206,7 @@ const CreatePage = () => {
         return;
       }
 
+      console.log('Pitch saved successfully');
       toast({
         title: "Pitch Saved!",
         description: "Your pitch has been saved to the library."
@@ -200,9 +228,15 @@ const CreatePage = () => {
   };
 
   const deletePitch = () => {
+    console.log('Deleting pitch');
     setGeneratedPitch(null);
     setTranscript('');
   };
+
+  // Don't render if not authenticated
+  if (!user) {
+    return null;
+  }
 
   // Show generated pitch view
   if (generatedPitch) {

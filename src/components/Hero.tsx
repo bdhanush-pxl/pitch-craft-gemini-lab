@@ -1,8 +1,24 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Mic, Zap, FileText } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+
 const Hero = () => {
-  return <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGetStarted = () => {
+    if (user) {
+      navigate('/dashboard/create');
+    } else {
+      navigate('/auth');
+    }
+  };
+
+  return (
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
       {/* Background gradient effects */}
       <div className="absolute inset-0 gradient-mesh"></div>
       <div className="absolute top-1/4 left-1/4 w-96 h-96 gradient-radial opacity-60"></div>
@@ -34,11 +50,13 @@ const Hero = () => {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in">
-          <Button size="lg" className="text-base px-8 py-3 h-auto font-semibold rounded-full hover:scale-105 transition-all duration-300 shadow-lg" asChild>
-            <a href="/auth">
-              Start Recording
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </a>
+          <Button 
+            size="lg" 
+            className="text-base px-8 py-3 h-auto font-semibold rounded-full hover:scale-105 transition-all duration-300 shadow-lg"
+            onClick={handleGetStarted}
+          >
+            Start Recording
+            <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
           <Button variant="outline" size="lg" className="text-base px-8 py-3 h-auto font-semibold rounded-full hover:scale-105 transition-all duration-300">
             See How It Works
@@ -78,6 +96,8 @@ const Hero = () => {
           </div>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default Hero;
