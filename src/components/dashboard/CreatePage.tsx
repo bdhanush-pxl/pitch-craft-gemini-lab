@@ -45,47 +45,48 @@ const CreatePage = () => {
     }
   }, [user, navigate]);
 
-  // Helper function to convert ArrayBuffer to base64 in chunks
-  const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-    const bytes = new Uint8Array(buffer);
-    const chunkSize = 32768; // 32KB chunks
-    let result = '';
-    
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      const chunk = bytes.slice(i, i + chunkSize);
-      result += String.fromCharCode(...chunk);
-    }
-    
-    return btoa(result);
-  };
-
   const startRecording = async () => {
     try {
       setError('');
       console.log('Starting recording...');
       
-      // Request microphone permission
+      // Request microphone permission with better audio settings
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          sampleRate: 16000,
+          sampleRate: 44100,
           channelCount: 1,
           echoCancellation: true,
-          noiseSuppression: true
+          noiseSuppression: true,
+          autoGainControl: true
         }
       });
 
       console.log('Microphone access granted');
 
+      // Check supported MIME types and use the best available
+      let mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'audio/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'audio/wav';
+          }
+        }
+      }
+
+      console.log('Using MIME type:', mimeType);
+
       // Set up MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+        mimeType: mimeType
       });
       
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        console.log('Audio data available:', event.data.size);
+        console.log('Audio data available:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
@@ -93,20 +94,37 @@ const CreatePage = () => {
 
       mediaRecorder.onstop = async () => {
         console.log('Recording stopped, processing audio...');
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        console.log('Audio blob size:', audioBlob.size);
+        console.log('Total chunks collected:', audioChunksRef.current.length);
+        
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('Audio blob created - size:', audioBlob.size, 'bytes, type:', audioBlob.type);
+        
+        if (audioBlob.size === 0) {
+          console.error('Audio blob is empty');
+          setError('Recording failed - no audio data captured');
+          setIsTranscribing(false);
+          return;
+        }
+        
         await transcribeAudio(audioBlob);
         
         // Stop all tracks to free up the microphone
         stream.getTracks().forEach(track => track.stop());
       };
 
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        setError('Recording error occurred');
+        setIsRecording(false);
+      };
+
+      // Start recording with smaller time slices for better data collection
+      mediaRecorder.start(250);
       setIsRecording(true);
-      console.log('Recording started successfully');
+      console.log('Recording started successfully with MIME type:', mimeType);
     } catch (error) {
       console.error('Error starting recording:', error);
-      setError('Failed to start recording. Please check microphone permissions.');
+      setError(`Failed to start recording: ${error.message}`);
     }
   };
 
@@ -122,30 +140,72 @@ const CreatePage = () => {
   const transcribeAudio = async (audioBlob: Blob) => {
     try {
       console.log('Starting transcription process...');
-      // Convert blob to base64 using the chunked method
+      console.log('Audio blob details:', {
+        size: audioBlob.size,
+        type: audioBlob.type
+      });
+
+      // Convert blob to array buffer
       const arrayBuffer = await audioBlob.arrayBuffer();
       console.log('ArrayBuffer size:', arrayBuffer.byteLength);
       
-      const base64Audio = arrayBufferToBase64(arrayBuffer);
+      if (arrayBuffer.byteLength === 0) {
+        throw new Error('Audio data is empty');
+      }
+
+      // Convert to base64 in a more reliable way
+      const bytes = new Uint8Array(arrayBuffer);
+      let binaryString = '';
+      const chunkSize = 8192;
+      
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.slice(i, i + chunkSize);
+        binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      
+      const base64Audio = btoa(binaryString);
       console.log('Audio converted to base64, length:', base64Audio.length);
+
+      if (base64Audio.length === 0) {
+        throw new Error('Base64 conversion failed');
+      }
 
       console.log('Calling transcribe-audio function...');
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
         body: { audio: base64Audio }
       });
 
+      console.log('Transcription response:', { data, error });
+
       if (error) {
-        console.error('Transcription error:', error);
-        throw error;
+        console.error('Transcription error from function:', error);
+        throw new Error(error.message || 'Transcription failed');
       }
 
-      console.log('Transcription successful:', data);
+      if (!data || !data.text) {
+        console.error('No transcription text received:', data);
+        throw new Error('No transcription text received from service');
+      }
+
+      console.log('Transcription successful:', data.text);
       setTranscript(data.text);
       setIsTranscribing(false);
+      
+      toast({
+        title: "Recording Transcribed!",
+        description: "Your audio has been successfully converted to text."
+      });
+
     } catch (error) {
       console.error('Transcription error:', error);
-      setError('Failed to transcribe audio. Please try again.');
+      setError(`Failed to transcribe audio: ${error.message}`);
       setIsTranscribing(false);
+      
+      toast({
+        title: "Transcription Failed",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -180,16 +240,34 @@ const CreatePage = () => {
         body: { transcript }
       });
 
+      console.log('Pitch generation response:', { data, error });
+
       if (error) {
         console.error('Pitch generation error:', error);
-        throw error;
+        throw new Error(error.message || 'Pitch generation failed');
+      }
+
+      if (!data) {
+        throw new Error('No pitch data received from service');
       }
 
       console.log('Pitch generated successfully:', data);
       setGeneratedPitch(data);
+      
+      toast({
+        title: "Pitch Generated!",
+        description: "Your AI-powered pitch deck is ready for review."
+      });
+
     } catch (error) {
       console.error('Error generating pitch:', error);
-      setError('Failed to generate pitch. Please try again.');
+      setError(`Failed to generate pitch: ${error.message}`);
+      
+      toast({
+        title: "Pitch Generation Failed",
+        description: error.message,
+        variant: "destructive"
+      });
     } finally {
       setIsGenerating(false);
     }
