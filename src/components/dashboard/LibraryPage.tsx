@@ -7,7 +7,6 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tables } from '@/integrations/supabase/types';
-
 interface SavedPitch {
   id: string;
   title: string;
@@ -31,14 +30,14 @@ interface SavedPitch {
 
 // Type for the raw pitch data from Supabase
 type RawPitchData = Tables<'pitches'>;
-
 const LibraryPage = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [savedPitches, setSavedPitches] = useState<SavedPitch[]>([]);
   const [selectedPitch, setSelectedPitch] = useState<SavedPitch | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
-
   useEffect(() => {
     if (user) {
       loadSavedPitches();
@@ -60,14 +59,15 @@ const LibraryPage = () => {
       funding: '',
       timeline: ''
     };
-
     let structure = defaultStructure;
-    
+
     // Safely parse the structure if it exists and is an object
     if (rawPitch.structure && typeof rawPitch.structure === 'object' && rawPitch.structure !== null) {
-      structure = { ...defaultStructure, ...rawPitch.structure as any };
+      structure = {
+        ...defaultStructure,
+        ...(rawPitch.structure as any)
+      };
     }
-
     return {
       id: rawPitch.id,
       title: rawPitch.title,
@@ -78,18 +78,16 @@ const LibraryPage = () => {
       status: rawPitch.status || 'completed'
     };
   };
-
   const loadSavedPitches = async () => {
     if (!user) return;
-
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('pitches')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
+      const {
+        data,
+        error
+      } = await supabase.from('pitches').select('*').eq('user_id', user.id).order('created_at', {
+        ascending: false
+      });
       if (error) {
         console.error('Error loading pitches:', error);
         toast({
@@ -114,16 +112,12 @@ const LibraryPage = () => {
       setLoading(false);
     }
   };
-
   const deletePitch = async (pitchId: string) => {
     setDeleting(pitchId);
     try {
-      const { error } = await supabase
-        .from('pitches')
-        .delete()
-        .eq('id', pitchId)
-        .eq('user_id', user?.id);
-
+      const {
+        error
+      } = await supabase.from('pitches').delete().eq('id', pitchId).eq('user_id', user?.id);
       if (error) {
         console.error('Error deleting pitch:', error);
         toast({
@@ -133,11 +127,10 @@ const LibraryPage = () => {
         });
         return;
       }
-
       setSavedPitches(pitches => pitches.filter(pitch => pitch.id !== pitchId));
       toast({
         title: "Pitch Deleted",
-        description: "The pitch has been removed from your library.",
+        description: "The pitch has been removed from your library."
       });
     } catch (error) {
       console.error('Error deleting pitch:', error);
@@ -150,7 +143,6 @@ const LibraryPage = () => {
       setDeleting(null);
     }
   };
-
   const downloadPitch = (pitch: SavedPitch) => {
     const pitchContent = `
 PITCH DECK - ${pitch.title}
@@ -169,8 +161,9 @@ ${pitch.transcript}
 
 Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
     `.trim();
-
-    const blob = new Blob([pitchContent], { type: 'text/plain' });
+    const blob = new Blob([pitchContent], {
+      type: 'text/plain'
+    });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -179,16 +172,13 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
     a.click();
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-
     toast({
       title: "Download Started",
-      description: "Your pitch deck has been downloaded as a text file.",
+      description: "Your pitch deck has been downloaded as a text file."
     });
   };
-
   if (loading) {
-    return (
-      <div className="flex-1 p-8">
+    return <div className="flex-1 p-8">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8 animate-fade-in">
             <h1 className="text-2xl font-bold font-poppins mb-2">Pitch Library</h1>
@@ -203,12 +193,9 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
             </div>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="flex-1 p-8">
+  return <div className="flex-1 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8 animate-fade-in">
@@ -220,12 +207,7 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
 
         {/* Pitches Grid */}
         <div className="space-y-4 animate-fade-in">
-          {savedPitches.length > 0 ? (
-            savedPitches.map((pitch) => (
-              <div
-                key={pitch.id}
-                className="p-6 bg-card border border-border/50 rounded-xl hover:border-primary/20 transition-all duration-200 hover-lift"
-              >
+          {savedPitches.length > 0 ? savedPitches.map(pitch => <div key={pitch.id} className="p-6 bg-card border border-border/50 rounded-xl hover:border-primary/20 transition-all duration-200 hover-lift">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20">
@@ -238,11 +220,7 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
                         <Calendar className="w-3 h-3" />
                         <span>Created on {new Date(pitch.created_at).toLocaleDateString()}</span>
                         <span className="mx-2">•</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          pitch.status === 'completed' 
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'
-                        }`}>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${pitch.status === 'completed' ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400'}`}>
                           {pitch.status === 'completed' ? 'Ready' : 'Processing'}
                         </span>
                       </div>
@@ -252,12 +230,7 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
                   <div className="flex items-center gap-2">
                     <Dialog>
                       <DialogTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 px-3 text-xs"
-                          onClick={() => setSelectedPitch(pitch)}
-                        >
+                        <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => setSelectedPitch(pitch)}>
                           <Eye className="w-3 h-3 mr-1" />
                           View
                         </Button>
@@ -266,8 +239,7 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
                         <DialogHeader>
                           <DialogTitle className="text-lg">{selectedPitch?.title}</DialogTitle>
                         </DialogHeader>
-                        {selectedPitch && (
-                          <div className="space-y-4">
+                        {selectedPitch && <div className="space-y-4">
                             <div>
                               <h3 className="font-semibold text-sm mb-2">One-Liner</h3>
                               <p className="text-sm text-muted-foreground">{selectedPitch.one_liner}</p>
@@ -276,51 +248,30 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
                             <div>
                               <h3 className="font-semibold text-sm mb-2">Pitch Structure</h3>
                               <div className="space-y-3">
-                                {Object.entries(selectedPitch.structure).map(([key, value]) => (
-                                  <div key={key}>
+                                {Object.entries(selectedPitch.structure).map(([key, value]) => <div key={key}>
                                     <h4 className="font-medium text-xs capitalize mb-1">
                                       {key.replace(/([A-Z])/g, ' $1').trim()}
                                     </h4>
-                                    <p className="text-xs text-muted-foreground">{value}</p>
-                                  </div>
-                                ))}
+                                    <p className="text-muted-foreground text-xs">{value}</p>
+                                  </div>)}
                               </div>
                             </div>
-                          </div>
-                        )}
+                          </div>}
                       </DialogContent>
                     </Dialog>
                     
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 text-xs"
-                      onClick={() => downloadPitch(pitch)}
-                    >
+                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => downloadPitch(pitch)}>
                       <Download className="w-3 h-3 mr-1" />
                       Download
                     </Button>
                     
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => deletePitch(pitch.id)}
-                      disabled={deleting === pitch.id}
-                    >
-                      {deleting === pitch.id ? (
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3 h-3 mr-1" />
-                      )}
+                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => deletePitch(pitch.id)} disabled={deleting === pitch.id}>
+                      {deleting === pitch.id ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
                       Delete
                     </Button>
                   </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-16">
+              </div>) : <div className="text-center py-16">
               <div className="w-16 h-16 bg-secondary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-muted-foreground" />
               </div>
@@ -331,12 +282,9 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
               <Button asChild size="sm">
                 <a href="/dashboard/create">Create Your First Pitch</a>
               </Button>
-            </div>
-          )}
+            </div>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default LibraryPage;
