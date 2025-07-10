@@ -242,7 +242,7 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
                         {selectedPitch && <div className="space-y-4">
                             <div>
                               <h3 className="font-semibold text-sm mb-2">One-Liner</h3>
-                              <p className="text-sm text-muted-foreground">{selectedPitch.one_liner}</p>
+                              <p className="text-muted-foreground text-base">{selectedPitch.one_liner}</p>
                             </div>
                             
                             <div>
