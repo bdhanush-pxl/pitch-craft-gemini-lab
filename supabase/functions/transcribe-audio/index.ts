@@ -15,14 +15,14 @@ serve(async (req) => {
   try {
     console.log('=== Transcription request received ===');
     
-    // Check if OpenAI API key is available
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiKey) {
-      console.error('OPENAI_API_KEY environment variable is not set');
-      throw new Error('OpenAI API key is not configured. Please contact support.');
+    // Check if Gemini API key is available
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!geminiKey) {
+      console.error('GEMINI_API_KEY environment variable is not set');
+      throw new Error('Gemini API key is not configured. Please contact support.');
     }
     
-    console.log('OpenAI API key is configured');
+    console.log('Gemini API key is configured');
     
     const { audio } = await req.json()
     
@@ -80,71 +80,91 @@ serve(async (req) => {
       throw new Error('Audio data is empty after decoding');
     }
 
-    // Prepare form data
-    console.log('Preparing form data for OpenAI API...');
-    const formData = new FormData()
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' })
-    formData.append('file', blob, 'audio.webm')
-    formData.append('model', 'whisper-1')
-    formData.append('language', 'en') // Specify English for better performance
+    // Convert binary audio to base64 for Gemini API
+    const base64Audio = btoa(String.fromCharCode(...binaryAudio));
+    
+    console.log('Sending request to Gemini API for transcription...');
 
-    console.log('Sending request to OpenAI Whisper API...');
+    // Use Gemini API for audio transcription
+    const prompt = `Please transcribe the following audio content. Return only the transcribed text without any additional commentary or formatting.`;
 
-    // Send to OpenAI with timeout and better error handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       console.log('Request timeout after 45 seconds');
       controller.abort();
-    }, 45000); // 45 second timeout
+    }, 45000);
 
     try {
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${openaiKey}`,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: "audio/webm",
+                  data: base64Audio
+                }
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
+          }
+        }),
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
 
-      console.log('OpenAI response status:', response.status);
-      console.log('OpenAI response headers:', Object.fromEntries(response.headers.entries()));
+      console.log('Gemini response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('OpenAI API error response:', {
+        console.error('Gemini API error response:', {
           status: response.status,
           statusText: response.statusText,
           body: errorText
         });
 
-        // Handle specific error cases
         if (response.status === 429) {
-          throw new Error('OpenAI API quota exceeded. Please add credits to your account or upgrade your plan.');
+          throw new Error('Gemini API quota exceeded. Please try again later.');
         } else if (response.status === 401) {
-          throw new Error('OpenAI API key is invalid. Please check your API key configuration.');
+          throw new Error('Gemini API key is invalid. Please check your API key configuration.');
         } else if (response.status === 413) {
           throw new Error('Audio file is too large. Please record a shorter audio clip.');
         } else {
-          throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
+          throw new Error(`Gemini API error (${response.status}): ${errorText}`);
         }
       }
 
       const result = await response.json();
       console.log('Transcription successful. Response keys:', Object.keys(result));
-      console.log('Transcription text length:', result.text?.length || 0);
 
-      if (!result.text) {
-        console.error('No text in OpenAI response:', result);
-        throw new Error('No transcription text received from OpenAI');
+      if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+        console.error('No transcription content in Gemini response:', result);
+        throw new Error('No transcription content received from Gemini');
+      }
+
+      const transcribedText = result.candidates[0].content.parts[0].text;
+      console.log('Transcription text length:', transcribedText?.length || 0);
+
+      if (!transcribedText) {
+        console.error('No transcription text in response');
+        throw new Error('No transcription text received from Gemini');
       }
 
       console.log('=== Transcription completed successfully ===');
       
       return new Response(
-        JSON.stringify({ text: result.text }),
+        JSON.stringify({ text: transcribedText }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
@@ -152,7 +172,7 @@ serve(async (req) => {
       clearTimeout(timeoutId);
       
       if (fetchError.name === 'AbortError') {
-        console.error('OpenAI request timed out after 45 seconds');
+        console.error('Gemini request timed out after 45 seconds');
         throw new Error('Transcription request timed out. Please try with a shorter audio clip.');
       }
       

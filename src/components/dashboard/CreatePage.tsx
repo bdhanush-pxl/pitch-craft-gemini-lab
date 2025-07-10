@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Loader2, RotateCcw, Sparkles, Save, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,6 @@ const CreatePage = () => {
   const [transcript, setTranscript] = useState('');
   const [generatedPitch, setGeneratedPitch] = useState<GeneratedPitch | null>(null);
   const [error, setError] = useState('');
-  const [quotaExceeded, setQuotaExceeded] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recognitionRef = useRef<any>(null);
