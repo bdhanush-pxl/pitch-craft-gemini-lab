@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Square, Loader2, RotateCcw, Sparkles, Save, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -176,28 +175,26 @@ const CreatePage = () => {
         type: audioBlob.type
       });
 
-      // Convert blob to array buffer
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      console.log('ArrayBuffer size:', arrayBuffer.byteLength);
-      
-      if (arrayBuffer.byteLength === 0) {
+      if (audioBlob.size === 0) {
         throw new Error('Audio data is empty');
       }
 
-      // Convert to base64 with chunked processing to prevent memory issues
-      const bytes = new Uint8Array(arrayBuffer);
-      let base64Audio = '';
-      const chunkSize = 8192;
-      
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.slice(i, i + chunkSize);
-        const binaryString = Array.from(chunk).map(byte => String.fromCharCode(byte)).join('');
-        base64Audio += btoa(binaryString);
-      }
+      // Convert blob to base64 using FileReader for better compatibility
+      const base64Audio = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Remove the data URL prefix (e.g., "data:audio/webm;base64,")
+          const base64Data = result.split(',')[1];
+          resolve(base64Data);
+        };
+        reader.onerror = () => reject(new Error('Failed to read audio file'));
+        reader.readAsDataURL(audioBlob);
+      });
       
       console.log('Audio converted to base64, length:', base64Audio.length);
 
-      if (base64Audio.length === 0) {
+      if (!base64Audio || base64Audio.length === 0) {
         throw new Error('Base64 conversion failed');
       }
 
@@ -214,7 +211,7 @@ const CreatePage = () => {
         // Check if it's a quota exceeded error
         if (error.message && error.message.toLowerCase().includes('quota')) {
           setQuotaExceeded(true);
-          throw new Error('OpenAI quota exceeded. Please add credits to your account or try the browser transcription option.');
+          throw new Error('Gemini quota exceeded. Please add credits to your account or try the browser transcription option.');
         }
         
         throw new Error(error.message || 'Transcription failed');

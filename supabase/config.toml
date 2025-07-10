@@ -1,1 +1,5 @@
+
 project_id = "ngobvhrfqblofacuqsru"
+
+[functions.transcribe-audio]
+verify_jwt = false

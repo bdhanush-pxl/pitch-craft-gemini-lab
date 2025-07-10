@@ -33,56 +33,12 @@ serve(async (req) => {
 
     console.log('Audio data received, length:', audio.length);
 
-    // Convert base64 to binary with better error handling
-    let binaryAudio;
-    try {
-      console.log('Starting base64 decoding...');
-      
-      // Decode base64 in chunks to handle large files
-      const chunkSize = 32768;
-      const chunks = [];
-      
-      for (let i = 0; i < audio.length; i += chunkSize) {
-        const chunk = audio.slice(i, i + chunkSize);
-        try {
-          const decodedChunk = atob(chunk);
-          const bytes = new Uint8Array(decodedChunk.length);
-          
-          for (let j = 0; j < decodedChunk.length; j++) {
-            bytes[j] = decodedChunk.charCodeAt(j);
-          }
-          
-          chunks.push(bytes);
-        } catch (chunkError) {
-          console.error(`Error decoding chunk ${i}:`, chunkError);
-          throw new Error(`Base64 decoding failed at chunk ${i}`);
-        }
-      }
-      
-      // Combine all chunks
-      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-      binaryAudio = new Uint8Array(totalLength);
-      let offset = 0;
-      
-      for (const chunk of chunks) {
-        binaryAudio.set(chunk, offset);
-        offset += chunk.length;
-      }
-      
-      console.log('Binary audio created successfully, size:', binaryAudio.length, 'bytes');
-    } catch (error) {
-      console.error('Base64 decoding error:', error);
-      throw new Error(`Failed to decode audio data: ${error.message}`);
-    }
-    
-    if (binaryAudio.length === 0) {
-      console.error('Binary audio is empty after decoding');
-      throw new Error('Audio data is empty after decoding');
+    // Simple base64 validation
+    if (!audio.match(/^[A-Za-z0-9+/]*={0,2}$/)) {
+      console.error('Invalid base64 format detected');
+      throw new Error('Invalid audio data format');
     }
 
-    // Convert binary audio to base64 for Gemini API
-    const base64Audio = btoa(String.fromCharCode(...binaryAudio));
-    
     console.log('Sending request to Gemini API for transcription...');
 
     // Use Gemini API for audio transcription
@@ -90,9 +46,9 @@ serve(async (req) => {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.log('Request timeout after 45 seconds');
+      console.log('Request timeout after 30 seconds');
       controller.abort();
-    }, 45000);
+    }, 30000);
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${geminiKey}`, {
@@ -107,7 +63,7 @@ serve(async (req) => {
               {
                 inline_data: {
                   mime_type: "audio/webm",
-                  data: base64Audio
+                  data: audio
                 }
               }
             ]
@@ -172,7 +128,7 @@ serve(async (req) => {
       clearTimeout(timeoutId);
       
       if (fetchError.name === 'AbortError') {
-        console.error('Gemini request timed out after 45 seconds');
+        console.error('Gemini request timed out after 30 seconds');
         throw new Error('Transcription request timed out. Please try with a shorter audio clip.');
       }
       
