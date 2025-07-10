@@ -252,7 +252,7 @@ Generated on: ${new Date(pitch.created_at).toLocaleDateString()}
                                     <h4 className="font-medium text-xs capitalize mb-1">
                                       {key.replace(/([A-Z])/g, ' $1').trim()}
                                     </h4>
-                                    <p className="text-muted-foreground text-xs">{value}</p>
+                                    <p className="text-muted-foreground text-sm">{value}</p>
                                   </div>)}
                               </div>
                             </div>
