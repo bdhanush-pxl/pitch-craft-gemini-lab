@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Mic, Plus, Library, LogOut } from 'lucide-react';
+import { Mic, Plus, Library, Timer, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from '@/components/ui/sidebar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,10 @@ const navigationItems = [{
   title: 'Library',
   url: '/dashboard/library',
   icon: Library
+}, {
+  title: 'Rehearsal',
+  url: '/dashboard/rehearsal',
+  icon: Timer
 }];
 
 export function DashboardSidebar() {

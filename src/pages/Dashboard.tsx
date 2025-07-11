@@ -6,6 +6,7 @@ import { DashboardSidebar } from '@/components/dashboard/DashboardSidebar';
 import { SidebarInset } from '@/components/ui/sidebar';
 import CreatePage from '@/components/dashboard/CreatePage';
 import LibraryPage from '@/components/dashboard/LibraryPage';
+import RehearsalPage from '@/components/dashboard/RehearsalPage';
 
 const Dashboard = () => {
   return (
@@ -17,6 +18,7 @@ const Dashboard = () => {
             <Route path="/" element={<Navigate to="/dashboard/create" replace />} />
             <Route path="/create" element={<CreatePage />} />
             <Route path="/library" element={<LibraryPage />} />
+            <Route path="/rehearsal" element={<RehearsalPage />} />
           </Routes>
         </SidebarInset>
       </div>

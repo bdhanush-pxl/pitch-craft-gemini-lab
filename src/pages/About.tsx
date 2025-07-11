@@ -3,7 +3,7 @@ import React from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
-import { Target, Users, Lightbulb, Award, Heart, Globe } from 'lucide-react';
+import { Target, Users, Lightbulb, Award, Heart } from 'lucide-react';
 
 const About = () => {
   const values = [
@@ -27,36 +27,6 @@ const About = () => {
       title: "Excellence",
       description: "We're committed to delivering the highest quality tools and experiences for our users."
     }
-  ];
-
-  const team = [
-    {
-      name: "Sarah Chen",
-      role: "CEO & Co-Founder",
-      bio: "Former venture capitalist with 10+ years of experience evaluating thousands of pitches."
-    },
-    {
-      name: "Marcus Rodriguez",
-      role: "CTO & Co-Founder",
-      bio: "AI researcher and former Google engineer specializing in natural language processing."
-    },
-    {
-      name: "Elena Kowalski",
-      role: "Head of Product",
-      bio: "Design thinking expert who's helped launch 50+ successful products across various industries."
-    },
-    {
-      name: "David Kim",
-      role: "Head of Engineering",
-      bio: "Full-stack engineer with expertise in scalable systems and machine learning infrastructure."
-    }
-  ];
-
-  const stats = [
-    { number: "10,000+", label: "Pitches Created" },
-    { number: "95%", label: "User Satisfaction" },
-    { number: "50+", label: "Countries Served" },
-    { number: "$2B+", label: "Capital Raised by Users" }
   ];
 
   return (
@@ -119,44 +89,6 @@ const About = () => {
                         </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div className="mb-16">
-            <div className="bg-gradient-to-r from-primary/10 to-green-400/10 rounded-3xl p-8 border border-primary/20">
-              <h2 className="text-2xl font-bold mb-8 text-center font-poppins">Our Impact</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                {stats.map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-3xl font-bold text-primary mb-2">{stat.number}</div>
-                    <div className="text-sm text-muted-foreground">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Team */}
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold mb-8 text-center font-poppins">Meet Our Team</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {team.map((member, index) => (
-                <Card key={index} className="bg-card/40 backdrop-blur-sm border-border hover:bg-card/60 transition-all duration-300 shadow-lg rounded-2xl group hover:scale-105">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-20 h-20 bg-gradient-to-br from-primary to-green-400 rounded-full mx-auto mb-4 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-primary-foreground">
-                        {member.name.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2 font-poppins">{member.name}</h3>
-                    <p className="text-primary text-sm font-medium mb-3">{member.role}</p>
-                    <p className="text-muted-foreground text-xs leading-relaxed">
-                      {member.bio}
-                    </p>
                   </CardContent>
                 </Card>
               ))}

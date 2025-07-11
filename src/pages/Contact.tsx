@@ -3,7 +3,7 @@ import React from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mail, MessageSquare, Phone, MapPin, Clock, Users } from 'lucide-react';
+import { Mail, MessageSquare, Phone, Users, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Contact = () => {
@@ -35,24 +35,6 @@ const Contact = () => {
       description: "Discuss custom solutions and enterprise partnerships.",
       contact: "sales@pitchcraft.com",
       availability: "Custom scheduling available"
-    }
-  ];
-
-  const offices = [
-    {
-      city: "San Francisco",
-      address: "123 Market Street, Suite 400\nSan Francisco, CA 94105",
-      phone: "+1 (555) 123-4567"
-    },
-    {
-      city: "New York",
-      address: "456 Broadway, Floor 15\nNew York, NY 10013",
-      phone: "+1 (555) 987-6543"
-    },
-    {
-      city: "London",
-      address: "789 Oxford Street\nLondon, W1C 1JN, UK",
-      phone: "+44 20 7123 4567"
     }
   ];
 
@@ -151,31 +133,6 @@ const Contact = () => {
                 </form>
               </CardContent>
             </Card>
-          </div>
-
-          {/* Office Locations */}
-          <div>
-            <h2 className="text-3xl font-bold mb-8 text-center font-poppins">Our Offices</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {offices.map((office, index) => (
-                <Card key={index} className="bg-card/40 backdrop-blur-sm border-border hover:bg-card/60 transition-all duration-300 shadow-lg rounded-2xl group hover:scale-105">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md border border-primary/20 group-hover:bg-primary/20 transition-colors duration-300">
-                        <MapPin className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-semibold mb-3 font-poppins">{office.city}</h3>
-                        <p className="text-muted-foreground text-sm mb-2 leading-relaxed whitespace-pre-line">
-                          {office.address}
-                        </p>
-                        <p className="text-sm font-medium">{office.phone}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
           </div>
         </div>
       </section>
