@@ -149,11 +149,11 @@ const API = () => {
             </p>
             <div className="text-center">
               <div className="bg-secondary/50 rounded-lg p-4 max-w-md mx-auto">
-                <code className="text-sm">
-                  curl -X POST https://api.pitchcraft.com/v1/pitches \<br/>
-                  -H "Authorization: Bearer YOUR_API_KEY" \<br/>
-                  -H "Content-Type: application/json" \<br/>
-                  -d '{"audio_url": "https://example.com/audio.mp3"}'
+                <code className="text-sm text-left block whitespace-pre-wrap">
+                  {`curl -X POST https://api.pitchcraft.com/v1/pitches \\
+  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{"audio_url": "https://example.com/audio.mp3"}'`}
                 </code>
               </div>
             </div>
